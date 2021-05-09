@@ -1,0 +1,37 @@
+# GitLab Active Directory (replace with yours)
+[[servers]]
+host = "domain-controller.heyvaldemar.net"
+port = 389
+use_ssl = false
+start_tls = false
+ssl_skip_verify = false
+bind_dn = "grafana-ldap@heyvaldemar.net"
+bind_password = 'YourPassword'
+search_filter = "(sAMAccountName=%s)"
+search_base_dns = ["OU=Users,DC=heyvaldemar,DC=net"]
+
+[servers.attributes]
+name = "givenName"
+surname = "sn"
+username = "sAMAccountName"
+member_of = "memberOf"
+email =  "mail"
+
+# Active Directory group for Grafana administrators (replace with yours)
+[[servers.group_mappings]]
+group_dn = "CN=Grafana-Admin,OU=Groups,DC=heyvaldemar,DC=net"
+org_role = "Admin"
+
+# Active Directory group for Grafana editors (replace with yours)
+[[servers.group_mappings]]
+group_dn = "CN=Grafana-Editor,OU=Groups,DC=heyvaldemar,DC=net"
+org_role = "Editor"
+
+# Active Directory group for Grafana viewers (replace with yours)
+[[servers.group_mappings]]
+group_dn = "CN=Grafana-Viewer,OU=Groups,DC=heyvaldemar,DC=net"
+org_role = "Viewer"
+
+[[servers.group_mappings]]
+group_dn = "*"
+org_role = "Viewer"
