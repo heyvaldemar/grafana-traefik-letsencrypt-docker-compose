@@ -32,7 +32,7 @@
 # Run grafana-restore-database.sh to restore database if needed.
 
 # Deploy Grafana server with a Docker Compose using the command:
-# docker-compose -f grafana-traefik-letsencrypt-docker-compose.yml -p grafana up -d
+# docker compose -f grafana-traefik-letsencrypt-docker-compose.yml -p grafana up -d
 
 # Detailed installation guide can be found on my website: https://www.heyvaldemar.com/install-grafana-on-ubuntu-server/
 
