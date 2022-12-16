@@ -63,7 +63,7 @@ services:
 
   grafana:
     # Image tag (replace with yours)
-    image: grafana/grafana:9.0.6
+    image: grafana/grafana:9.3.2
     volumes:
       - ./ldap.toml:/etc/grafana/ldap.toml
     environment:
@@ -128,7 +128,7 @@ services:
 
   traefik:
     # Image tag (replace with yours)
-    image: traefik:2.8
+    image: traefik:2.9
     command:
       - "--log.level=WARN"
       - "--accesslog=true"
