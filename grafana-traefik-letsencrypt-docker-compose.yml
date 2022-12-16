@@ -128,7 +128,7 @@ services:
 
   traefik:
     # Image tag (replace with yours)
-    image: traefik:2.8
+    image: traefik:2.9
     command:
       - "--log.level=WARN"
       - "--accesslog=true"
