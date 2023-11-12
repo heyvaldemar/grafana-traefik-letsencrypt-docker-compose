@@ -1,6 +1,6 @@
 # Grafana with Let's Encrypt Using Docker Compose
 
-# The complete installation guide is available on my https://www.heyvaldemar.com/install-grafana-using-docker-compose/
+# The complete installation guide is available on my website https://www.heyvaldemar.com/install-grafana-using-docker-compose/
 
 # Change variables in the `.env` to meet your requirements.
 # Note that the `.env` file should be in the same directory as `grafana-traefik-letsencrypt-docker-compose.yml`.
