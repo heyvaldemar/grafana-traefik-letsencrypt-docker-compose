@@ -49,7 +49,6 @@ services:
       GF_AUTH_ANONYMOUS_DISABLE_LOGIN_FORM: ${GRAFANA_AUTH_ANONYMOUS_DISABLE_LOGIN_FORM}
       GF_USERS_ALLOW_SIGN_UP: ${GRAFANA_USERS_ALLOW_SIGN_UP}
       GF_PATHS_PROVISIONING: ${GRAFANA_PROVISIONING_PATH}
-      GF_PATHS_CONFIG: ${GRAFANA_CONFIG_PATH}
       GF_PATHS_DATA: ${GRAFANA_DATA_PATH}
       GF_PATHS_LOGS: ${GRAFANA_LOGS_PATH}
       GF_PATHS_PLUGINS: ${GRAFANA_PLUGINS_PATH}
@@ -64,11 +63,11 @@ services:
       - grafana-network
       - traefik-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 30s
     labels:
       # Enable Traefik for this container
       - "traefik.enable=true"
