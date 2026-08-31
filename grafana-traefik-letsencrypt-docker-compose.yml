@@ -1,3 +1,15 @@
+# Image pins live HERE, as interpolation defaults, so `git pull` (or
+# re-downloading this file) delivers the exact version combination this
+# repository has tested — no .env editing required. Setting the matching
+# variable in .env overrides the default for anyone who wants to pin
+# differently; .env itself carries only secrets and deliberate overrides.
+# CI (Trivy scans, check-pin-freshness, the ephemeral test .env) reads
+# the pins from these lines — this block is the single source of truth.
+x-images:
+  traefik: &traefik-image ${TRAEFIK_IMAGE_TAG:-traefik:3.7@sha256:9c2a54d87f76f5c2f5f2682c68394af92fb12c0a2686798d6462a3f84bd78eaf}
+  postgres: &postgres-image ${GRAFANA_POSTGRES_IMAGE_TAG:-postgres:17-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73}
+  grafana: &grafana-image ${GRAFANA_IMAGE_TAG:-grafana/grafana:13.2.0@sha256:3fd54ae1214669f8355f065ec9f6445d5279a3d77095ab048ca045685272429b}
+
 networks:
   grafana-network:
     external: true
@@ -14,17 +26,17 @@ volumes:
 
 services:
   postgres:
-    image: ${GRAFANA_POSTGRES_IMAGE_TAG}
+    image: *postgres-image
     volumes:
       - grafana-postgres:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: ${GRAFANA_DB_NAME}
-      POSTGRES_USER: ${GRAFANA_DB_USER}
-      POSTGRES_PASSWORD: ${GRAFANA_DB_PASSWORD}
+      POSTGRES_DB: ${GRAFANA_DB_NAME:-grafanadb}
+      POSTGRES_USER: ${GRAFANA_DB_USER:-grafanadbuser}
+      POSTGRES_PASSWORD: ${GRAFANA_DB_PASSWORD:?set in .env - see .env.example for generation command}
     networks:
       - grafana-network
     healthcheck:
-      test: [ "CMD", "pg_isready", "-q", "-d", "${GRAFANA_DB_NAME}", "-U", "${GRAFANA_DB_USER}" ]
+      test: [ "CMD", "pg_isready", "-q", "-d", "${GRAFANA_DB_NAME:-grafanadb}", "-U", "${GRAFANA_DB_USER:-grafanadbuser}" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -32,33 +44,33 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: ${GRAFANA_IMAGE_TAG}
+    image: *grafana-image
     volumes:
-      - grafana-data:${DATA_PATH}
+      - grafana-data:${DATA_PATH:-/var/lib/grafana}
     environment:
-      GF_DATABASE_TYPE: ${GRAFANA_DB_TYPE}
+      GF_DATABASE_TYPE: ${GRAFANA_DB_TYPE:-postgres}
       GF_DATABASE_HOST: postgres
-      GF_DATABASE_NAME: ${GRAFANA_DB_NAME}
-      GF_DATABASE_USER: ${GRAFANA_DB_USER}
+      GF_DATABASE_NAME: ${GRAFANA_DB_NAME:-grafanadb}
+      GF_DATABASE_USER: ${GRAFANA_DB_USER:-grafanadbuser}
       GF_DATABASE_PASSWORD: ${GRAFANA_DB_PASSWORD}
-      GF_SERVER_DOMAIN: ${GRAFANA_HOSTNAME}
-      GF_SERVER_ROOT_URL: ${GRAFANA_URL}
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USERNAME}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
-      GF_AUTH_ANONYMOUS_ENABLED: ${GRAFANA_AUTH_ANONYMOUS_ENABLED}
-      GF_AUTH_ANONYMOUS_DISABLE_LOGIN_FORM: ${GRAFANA_AUTH_ANONYMOUS_DISABLE_LOGIN_FORM}
-      GF_USERS_ALLOW_SIGN_UP: ${GRAFANA_USERS_ALLOW_SIGN_UP}
-      GF_PATHS_PROVISIONING: ${GRAFANA_PROVISIONING_PATH}
-      GF_PATHS_DATA: ${GRAFANA_DATA_PATH}
-      GF_PATHS_LOGS: ${GRAFANA_LOGS_PATH}
-      GF_PATHS_PLUGINS: ${GRAFANA_PLUGINS_PATH}
-      GF_INSTALL_PLUGINS: ${GRAFANA_PLUGINS_INSTALL}
-      GF_SMTP_ENABLED: 'true'
-      GF_SMTP_HOST: ${GRAFANA_SMTP_ADDRESS}:${GRAFANA_SMTP_PORT}
-      GF_SMTP_USER: ${GRAFANA_SMTP_USER_NAME}
-      GF_SMTP_PASSWORD: ${GRAFANA_SMTP_PASSWORD}
-      GF_SMTP_FROM_NAME: ${GRAFANA_SMTP_NAME_FROM}
-      GF_SMTP_FROM_ADDRESS: ${GRAFANA_EMAIL_FROM}
+      GF_SERVER_DOMAIN: ${GRAFANA_HOSTNAME:?set in .env - see .env.example}
+      GF_SERVER_ROOT_URL: ${GRAFANA_URL:?set in .env - see .env.example}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USERNAME:-grafanaadmin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set in .env - see .env.example for generation command}
+      GF_AUTH_ANONYMOUS_ENABLED: ${GRAFANA_AUTH_ANONYMOUS_ENABLED:-false}
+      GF_AUTH_ANONYMOUS_DISABLE_LOGIN_FORM: ${GRAFANA_AUTH_ANONYMOUS_DISABLE_LOGIN_FORM:-false}
+      GF_USERS_ALLOW_SIGN_UP: ${GRAFANA_USERS_ALLOW_SIGN_UP:-false}
+      GF_PATHS_PROVISIONING: ${GRAFANA_PROVISIONING_PATH:-/etc/grafana/provisioning}
+      GF_PATHS_DATA: ${GRAFANA_DATA_PATH:-/var/lib/grafana}
+      GF_PATHS_LOGS: ${GRAFANA_LOGS_PATH:-/var/log/grafana}
+      GF_PATHS_PLUGINS: ${GRAFANA_PLUGINS_PATH:-/var/lib/grafana/plugins}
+      GF_INSTALL_PLUGINS: ${GRAFANA_PLUGINS_INSTALL:-alexanderzobnin-zabbix-app}
+      GF_SMTP_ENABLED: ${GRAFANA_SMTP_ENABLED:-false}
+      GF_SMTP_HOST: ${GRAFANA_SMTP_ADDRESS:-smtp.example.com}:${GRAFANA_SMTP_PORT:-587}
+      GF_SMTP_USER: ${GRAFANA_SMTP_USER_NAME:-}
+      GF_SMTP_PASSWORD: ${GRAFANA_SMTP_PASSWORD:-}
+      GF_SMTP_FROM_NAME: ${GRAFANA_SMTP_NAME_FROM:-Grafana Alert}
+      GF_SMTP_FROM_ADDRESS: ${GRAFANA_EMAIL_FROM:-grafana@example.com}
     networks:
       - grafana-network
       - traefik-network
@@ -99,10 +111,10 @@ services:
         condition: service_healthy
 
   traefik:
-    image: ${TRAEFIK_IMAGE_TAG}
+    image: *traefik-image
     command:
       # Set the log level (DEBUG, INFO, WARN, ERROR)
-      - "--log.level=${TRAEFIK_LOG_LEVEL}"
+      - "--log.level=${TRAEFIK_LOG_LEVEL:-WARN}"
       # Enable the built-in API and web-based dashboard
       - "--api.dashboard=true"
       # Enable the /ping endpoint so we can health-check Traefik
@@ -127,7 +139,7 @@ services:
       # Use ACME (Let's Encrypt) to generate/renew certificates via TLS challenge
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
       # The email address used by Let's Encrypt for renewal notices
-      - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL:?set in .env - see .env.example}"
       # The file where ACME certificates are stored inside the container
       - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
       # Enable Prometheus metrics
@@ -156,14 +168,14 @@ services:
       # Enable Traefik for this container
       - "traefik.enable=true"
       # A router to expose the Traefik dashboard
-      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
+      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_HOSTNAME:?set in .env - see .env.example}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
       - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.dashboard.service=api@internal"
       # Basic Authentication for the Traefik dashboard
       - "traefik.http.routers.dashboard.middlewares=authtraefik"
-      - "traefik.http.middlewares.authtraefik.basicauth.users=${TRAEFIK_BASIC_AUTH}"
+      - "traefik.http.middlewares.authtraefik.basicauth.users=${TRAEFIK_BASIC_AUTH:?set in .env - see .env.example for htpasswd generation}"
       # Specify the internal server port to the dashboard service
       - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
       # Pass the original Host header to the backend
@@ -171,33 +183,33 @@ services:
     restart: unless-stopped
 
   backups:
-    image: ${GRAFANA_POSTGRES_IMAGE_TAG}
+    image: *postgres-image
     command: >-
-      sh -c 'sleep $BACKUP_INIT_SLEEP &&
+      sh -c 'sleep $$BACKUP_INIT_SLEEP &&
       while true; do
-        pg_dump -h postgres -p 5432 -d $GRAFANA_DB_NAME -U $GRAFANA_DB_USER | gzip > $POSTGRES_BACKUPS_PATH/$POSTGRES_BACKUP_NAME-$(date "+%Y-%m-%d_%H-%M").gz &&
-        tar -zcpf $DATA_BACKUPS_PATH/$DATA_BACKUP_NAME-$(date "+%Y-%m-%d_%H-%M").tar.gz $DATA_PATH &&
-        find $POSTGRES_BACKUPS_PATH -type f -mtime +$POSTGRES_BACKUP_PRUNE_DAYS | xargs rm -f &&
-        find $DATA_BACKUPS_PATH -type f -mtime +$DATA_BACKUP_PRUNE_DAYS | xargs rm -f;
-        sleep $BACKUP_INTERVAL; done'
+        pg_dump -h postgres -p 5432 -d $$GRAFANA_DB_NAME -U $$GRAFANA_DB_USER | gzip > $$POSTGRES_BACKUPS_PATH/$$POSTGRES_BACKUP_NAME-$$(date "+%Y-%m-%d_%H-%M").gz &&
+        tar -zcpf $$DATA_BACKUPS_PATH/$$DATA_BACKUP_NAME-$$(date "+%Y-%m-%d_%H-%M").tar.gz $$DATA_PATH &&
+        find $$POSTGRES_BACKUPS_PATH -type f -mtime +$$POSTGRES_BACKUP_PRUNE_DAYS | xargs rm -f &&
+        find $$DATA_BACKUPS_PATH -type f -mtime +$$DATA_BACKUP_PRUNE_DAYS | xargs rm -f;
+        sleep $$BACKUP_INTERVAL; done'
     volumes:
       - grafana-postgres-backup:/var/lib/postgresql/data
-      - grafana-data:${DATA_PATH}
-      - grafana-data-backups:${DATA_BACKUPS_PATH}
-      - grafana-database-backups:${POSTGRES_BACKUPS_PATH}
+      - grafana-data:${DATA_PATH:-/var/lib/grafana}
+      - grafana-data-backups:${DATA_BACKUPS_PATH:-/srv/grafana-application-data/backups}
+      - grafana-database-backups:${POSTGRES_BACKUPS_PATH:-/srv/grafana-postgres/backups}
     environment:
-      GRAFANA_DB_NAME: ${GRAFANA_DB_NAME}
-      GRAFANA_DB_USER: ${GRAFANA_DB_USER}
+      GRAFANA_DB_NAME: ${GRAFANA_DB_NAME:-grafanadb}
+      GRAFANA_DB_USER: ${GRAFANA_DB_USER:-grafanadbuser}
       PGPASSWORD: ${GRAFANA_DB_PASSWORD}
-      BACKUP_INIT_SLEEP: ${BACKUP_INIT_SLEEP}
-      BACKUP_INTERVAL: ${BACKUP_INTERVAL}
-      POSTGRES_BACKUP_PRUNE_DAYS: ${POSTGRES_BACKUP_PRUNE_DAYS}
-      DATA_BACKUP_PRUNE_DAYS: ${DATA_BACKUP_PRUNE_DAYS}
-      POSTGRES_BACKUPS_PATH: ${POSTGRES_BACKUPS_PATH}
-      DATA_BACKUPS_PATH: ${DATA_BACKUPS_PATH}
-      DATA_PATH: ${DATA_PATH}
-      POSTGRES_BACKUP_NAME: ${POSTGRES_BACKUP_NAME}
-      DATA_BACKUP_NAME: ${DATA_BACKUP_NAME}
+      BACKUP_INIT_SLEEP: ${BACKUP_INIT_SLEEP:-30m}
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-24h}
+      POSTGRES_BACKUP_PRUNE_DAYS: ${POSTGRES_BACKUP_PRUNE_DAYS:-7}
+      DATA_BACKUP_PRUNE_DAYS: ${DATA_BACKUP_PRUNE_DAYS:-7}
+      POSTGRES_BACKUPS_PATH: ${POSTGRES_BACKUPS_PATH:-/srv/grafana-postgres/backups}
+      DATA_BACKUPS_PATH: ${DATA_BACKUPS_PATH:-/srv/grafana-application-data/backups}
+      DATA_PATH: ${DATA_PATH:-/var/lib/grafana}
+      POSTGRES_BACKUP_NAME: ${POSTGRES_BACKUP_NAME:-grafana-postgres-backup}
+      DATA_BACKUP_NAME: ${DATA_BACKUP_NAME:-grafana-application-data-backup}
     networks:
       - grafana-network
     restart: unless-stopped
