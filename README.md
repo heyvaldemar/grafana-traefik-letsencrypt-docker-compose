@@ -1,162 +1,201 @@
-# Grafana with Let's Encrypt Using Docker Compose
+# Grafana + Traefik + Let's Encrypt — Docker Compose
 
-[![Deployment Verification](https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml/badge.svg)](https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/actions)
+[![Deployment Verification](https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-The badge displayed on my repository indicates the status of the deployment verification workflow as executed on the latest commit to the main branch.
+## Contents
 
-**Passing**: This means the most recent commit has successfully passed all deployment checks, confirming that the Docker Compose setup functions correctly as designed.
+- [Why this stack?](#why-this-stack)
+- [Prerequisites](#prerequisites)
+- [Getting started](#getting-started)
+- [Features](#features)
+  - [Typical use cases](#typical-use-cases)
+- [Email alerts (SMTP)](#email-alerts-smtp)
+- [Supply chain trust](#supply-chain-trust)
+- [Production checklist](#production-checklist)
+- [Backups](#backups)
+- [Testing](#testing)
+- [Security Notes](#security-notes)
+- [About the maintainer](#about-the-maintainer)
 
-📙 The complete installation guide is available on my [website](https://www.heyvaldemar.com/install-grafana-using-docker-compose/).
+This repository deploys **Grafana** behind **Traefik** with automatic **Let's Encrypt TLS**, backed by **PostgreSQL** (instead of the default SQLite — real backups, real concurrency), with a scheduled **backup container** and companion **restore scripts**. One `docker compose up` away from production-shaped dashboards at `https://your-domain`.
 
-❗ Copy `.env.example` to `.env` and fill in the required values (hostnames, Let's Encrypt email, and generated passwords) before deploying. `.env` is gitignored — it holds your secrets and never belongs in git. Image versions are **not** set in `.env`: the tested `tag@sha256:digest` pins live in the compose file's `x-images` block, so `git pull` alone delivers the version combination this repository has tested. Setting an `*_IMAGE_TAG` variable in `.env` overrides the default when you deliberately want a different version.
+📙 Full narrative installation guide on the blog: [heyvaldemar.com/install-grafana-using-docker-compose/](https://www.heyvaldemar.com/install-grafana-using-docker-compose/).
 
-🔄 **Upgrading an existing deployment:** back up the database first. Grafana migrates its schema automatically on first start with the newer image (this release moves a major, 12 → 13); there is no downgrade path other than restoring the backup. SMTP is now disabled by default — set `GRAFANA_SMTP_ENABLED=true` plus the `GRAFANA_SMTP_*` values in `.env` if you use email alerts.
+## Why this stack?
 
-💡 Note that the `.env` file should be in the same directory as `grafana-traefik-letsencrypt-docker-compose.yml`.
+| Need | This stack | Manual install | Kubernetes | Other compose examples |
+|------|-----------|----------------|------------|------------------------|
+| Ready to deploy in <10 min | ✅ | ❌ | ✅ if K8s is already running | Often |
+| TLS via Let's Encrypt, auto-renewed | ✅ Traefik ACME built-in | Manual certbot | Via cert-manager | Rare |
+| PostgreSQL backend (not SQLite) | ✅ | Manual config | ✅ | Rare |
+| Zabbix datasource plugin preinstalled | ✅ | Manual install | Init containers | Rare |
+| Scheduled DB + data backups + pruning | ✅ | Manual cron | External | Rare |
+| Upstream images pinned by `sha256` digest | ✅ | N/A | Depends | Rare |
+| Weekly pin-freshness check in CI | ✅ | N/A | Depends | Rare |
+| CI-verified deployment on every push | ✅ `database: ok` | N/A | Varies | Rare |
+| Credentials via env (never committed) | ✅ | N/A | K8s Secrets | Often committed plaintext |
 
-Create networks for your services before deploying the configuration using the commands:
+Four moving parts (Traefik + Grafana + Postgres + backups). No Kubernetes prerequisites, no manual certificate management.
 
-`docker network create traefik-network`
+## Prerequisites
 
-`docker network create grafana-network`
+Before you start, you need:
 
-Deploy Grafana using Docker Compose:
+- **A Linux server** with a public IP. Tested on Ubuntu 22.04 LTS+ and Debian 12+. Local Mac/Windows works for dev; production is Linux.
+- **Docker Engine 24+ and Docker Compose 2.20+.** Quick check: `docker version` and `docker compose version`.
+- **A domain you control,** with two `A` records pointing at your server's public IP — one for Grafana (e.g. `grafana.example.com`), one for the Traefik dashboard (e.g. `traefik.grafana.example.com`). DNS must propagate before deploy or the Let's Encrypt TLS-ALPN challenge will fail.
+- **Ports 80 and 443 open** on the server's firewall and not bound by another service.
+- **~1 GB free RAM and 1 free CPU** for the running stack.
 
-`docker compose -f grafana-traefik-letsencrypt-docker-compose.yml -p grafana up -d`
+## Getting started
+
+```bash
+# 1. Clone
+git clone https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose
+cd grafana-traefik-letsencrypt-docker-compose
+
+# 2. Create the two Docker networks the stack expects
+docker network create traefik-network
+docker network create grafana-network
+
+# 3. Copy the environment template and fill in required values
+cp .env.example .env
+$EDITOR .env
+# ^ Required: GRAFANA_DB_PASSWORD, GRAFANA_ADMIN_PASSWORD,
+#   GRAFANA_HOSTNAME, GRAFANA_URL, TRAEFIK_HOSTNAME, TRAEFIK_ACME_EMAIL,
+#   TRAEFIK_BASIC_AUTH. See .env.example for generation commands.
+
+# 4. Deploy
+docker compose -f grafana-traefik-letsencrypt-docker-compose.yml -p grafana up -d
+```
+
+Within a minute `https://${GRAFANA_HOSTNAME}` serves the Grafana login with a fresh Let's Encrypt certificate. Log in with `GRAFANA_ADMIN_USERNAME` / `GRAFANA_ADMIN_PASSWORD`.
+
+### What success looks like
+
+```bash
+# All services healthy:
+docker compose -f grafana-traefik-letsencrypt-docker-compose.yml -p grafana ps
+
+# Health endpoint reports the database is fine:
+curl -fsS "https://${GRAFANA_HOSTNAME}/api/health"
+# Expected: { "database": "ok", "version": "13.2.0", ... }
+
+# Traefik issued a certificate:
+docker compose -p grafana logs traefik | grep -i "adding certificate"
+
+# First backup lands after BACKUP_INIT_SLEEP (default 30m):
+docker compose -p grafana logs backups | tail -3
+```
+
+### Common first-deploy issues
+
+- **Cert issuance fails.** DNS hasn't propagated or port 80 isn't reachable from the internet. Confirm with `dig +short ${GRAFANA_HOSTNAME}` and `curl -I http://${GRAFANA_HOSTNAME}` from outside the server.
+- **`docker compose up` fails with `set in .env`.** A required variable is empty; the error names it.
+- **`network grafana-network not found`.** Step 2 was skipped.
+- **Login loop or CSRF errors.** `GRAFANA_URL` must exactly match the public URL (protocol + hostname).
+
+### Apply `.env` or compose-file changes
+
+```bash
+docker compose -f grafana-traefik-letsencrypt-docker-compose.yml -p grafana up -d --force-recreate
+```
+
+## Features
+
+- **Grafana** latest stable (13.2.0) with a **PostgreSQL backend** — consistent backups and no SQLite locking.
+- **Zabbix datasource plugin** (`alexanderzobnin-zabbix-app`) preinstalled by default; add more via `GRAFANA_PLUGINS_INSTALL`.
+- **Traefik v3** reverse proxy with automatic HTTP→HTTPS redirect and Let's Encrypt TLS-ALPN certificate issuance.
+- **Basic-auth protected Traefik dashboard** on a separate hostname.
+- **Sign-up and anonymous access disabled by default**; SMTP off by default (opt-in for alert emails).
+- **Scheduled backups** of the database and Grafana data with retention pruning, plus restore scripts.
+- **Credentials required at deploy time** — compose fails fast if `.env` is incomplete.
+
+### Typical use cases
+
+- **Dashboards for a Zabbix installation** — pairs with the [Zabbix template](https://github.com/heyvaldemar/zabbix-traefik-letsencrypt-docker-compose); the datasource plugin ships preinstalled.
+- **Central observability UI** — Prometheus, Loki, InfluxDB, and dozens of other datasources.
+- **Team metrics portal** — org/team permissions on a proper database backend.
+- **Alerting hub** — Grafana Alerting with email (enable SMTP), Slack, Telegram, or webhooks.
+
+## Email alerts (SMTP)
+
+SMTP is **disabled by default**. To enable alert emails, set in `.env`:
+
+```bash
+GRAFANA_SMTP_ENABLED=true
+GRAFANA_SMTP_ADDRESS=smtp.example.com
+GRAFANA_SMTP_PORT=587
+GRAFANA_SMTP_USER_NAME=grafana@example.com
+GRAFANA_SMTP_PASSWORD=your_smtp_password
+GRAFANA_EMAIL_FROM=grafana@example.com
+```
+
+then `docker compose up -d --force-recreate`.
+
+## Supply chain trust
+
+This repository is a **deployment template**, not a custom Docker image. It orchestrates three upstream images:
+
+- [`traefik`](https://hub.docker.com/_/traefik) — reverse proxy, Docker Hub official image
+- [`grafana/grafana`](https://hub.docker.com/r/grafana/grafana) — Grafana upstream
+- [`postgres`](https://hub.docker.com/_/postgres) — PostgreSQL (alpine), Docker Hub official image
+
+All three are pinned to `tag@sha256:<digest>` as interpolation defaults in the compose file's `x-images` block. Compose pulls by digest, not by tag — and `git pull` alone delivers the version combination this repository has tested. Setting an `*_IMAGE_TAG` variable in `.env` overrides the default when you deliberately want a different version.
+
+The weekly `check-pin-freshness` CI job re-resolves each pinned tag against its registry and compares the pinned Grafana and Traefik versions against the latest upstream releases — any drift fails the run and notifies the maintainer. CI's **Deployment Verification** workflow runs on every push, pull request, and every Monday at 06:00 UTC. GitHub Actions are pinned by commit SHA; Dependabot keeps those fresh.
+
+## Production checklist
+
+Before exposing this to real users, check every box:
+
+- [ ] **Strong secrets.** `GRAFANA_DB_PASSWORD` and `GRAFANA_ADMIN_PASSWORD` at 24+ random characters; regenerate the Traefik dashboard BCrypt hash per deployment.
+- [ ] **Keep sign-ups disabled** (`GRAFANA_USERS_ALLOW_SIGN_UP=false`, the default) unless you mean it.
+- [ ] **Host-mount the backup volumes** for disaster recovery — bind the backup paths to host directories covered by your off-host backup solution.
+- [ ] **Verify Let's Encrypt cert issuance** in the Traefik logs on first start.
+- [ ] **Back up before major upgrades.** Grafana migrates its schema forward automatically (this template moved 12 → 13); the way back is a restore.
+- [ ] **Know the restore procedure.** Run both restore scripts against a test environment before you need them in production.
 
 ## Backups
 
-The `backups` container in the configuration is responsible for the following:
+The `backups` container performs a dump → archive → prune → sleep loop: `pg_dump | gzip` of the Grafana database, `tar.gz` of the Grafana data directory (dashboards live in the DB; the data dir carries plugins and images), pruning by retention windows, then sleeping `BACKUP_INTERVAL` (default 24h).
 
-1. **Database Backup**: Creates compressed backups of the PostgreSQL database using pg_dump.
-Customizable backup path, filename pattern, and schedule through variables like `POSTGRES_BACKUPS_PATH`, `POSTGRES_BACKUP_NAME`, and `BACKUP_INTERVAL`.
+**Verify backups are running:**
 
-2. **Application Data Backup**: Compresses and stores backups of the application data on the same schedule. Controlled via variables such as `DATA_BACKUPS_PATH`, `DATA_BACKUP_NAME`, and `BACKUP_INTERVAL`.
+```bash
+docker compose -p grafana logs backups | tail -5
+docker compose -p grafana exec backups sh -c 'ls -la /srv/grafana-postgres/backups/ /srv/grafana-application-data/backups/'
+```
 
-3. **Backup Pruning**: Periodically removes backups exceeding a specified age to manage storage. Customizable pruning schedule and age threshold with `POSTGRES_BACKUP_PRUNE_DAYS` and `DATA_BACKUP_PRUNE_DAYS`.
+**Restore** with the interactive scripts (`chmod +x *.sh` once): `./grafana-restore-database.sh`, then `./grafana-restore-application-data.sh` if needed.
 
-By utilizing this container, consistent and automated backups of the essential components of your instance are ensured. Moreover, efficient management of backup storage and tailored backup routines can be achieved through easy and flexible configuration using environment variables.
+## Testing
 
-## grafana-restore-database.sh Description
+The [Deployment Verification](https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml?query=branch%3Amain) workflow runs on every push, pull request, and every Monday at 06:00 UTC:
 
-This script facilitates the restoration of a database backup:
+1. **Lint** — shellcheck on both restore scripts, actionlint on the workflow.
+2. **Trivy scans** of all three pinned images (CRITICAL/HIGH, SARIF to the Security tab).
+3. **Pin freshness** (weekly/manual) — digest drift plus release-lag checks for Grafana and Traefik.
+4. **Deploy-and-test** — boots the full stack with ephemeral credentials and requires `/api/health` to report `database: ok` through Traefik plus a 200 login page — the shipped configuration must produce a working Grafana on its Postgres backend, not just started containers.
 
-1. **Identify Containers**: It first identifies the service and backups containers by name, finding the appropriate container IDs.
+A green run is the authoritative proof that the template deploys end-to-end.
 
-2. **List Backups**: Displays all available database backups located at the specified backup path.
+## Security Notes
 
-3. **Select Backup**: Prompts the user to copy and paste the desired backup name from the list to restore the database.
+- Credentials are read from `.env` at deploy time; `.env` is gitignored and compose fails fast on missing required variables.
+- **Pre-rotation advisory.** Releases before v1.0.0 (2026-08-31) shipped a tracked `.env` with generated-looking database, admin, and SMTP passwords. Rotate them if your deployment reused them.
+- Anonymous access and sign-ups are disabled by default; SMTP is off by default.
+- Upstream image digests are pinned; the weekly freshness job flags drift loudly.
 
-4. **Stop Service**: Temporarily stops the service to ensure data consistency during restoration.
+---
 
-5. **Restore Database**: Executes a sequence of commands to drop the current database, create a new one, and restore it from the selected compressed backup file.
-
-6. **Start Service**: Restarts the service after the restoration is completed.
-
-To make the `grafana-restore-database.shh` script executable, run the following command:
-
-`chmod +x grafana-restore-database.sh`
-
-Usage of this script ensures a controlled and guided process to restore the database from an existing backup.
-
-## grafana-restore-application-data.sh Description
-
-This script is designed to restore the application data:
-
-1. **Identify Containers**: Similarly to the database restore script, it identifies the service and backups containers by name.
-
-2. **List Application Data Backups**: Displays all available application data backups at the specified backup path.
-
-3. **Select Backup**: Asks the user to copy and paste the desired backup name for application data restoration.
-
-4. **Stop Service**: Stops the service to prevent any conflicts during the restore process.
-
-5. **Restore Application Data**: Removes the current application data and then extracts the selected backup to the appropriate application data path.
-
-6. **Start Service**: Restarts the service after the application data has been successfully restored.
-
-To make the `grafana-restore-application-data.sh` script executable, run the following command:
-
-`chmod +x grafana-restore-application-data.sh`
-
-By utilizing this script, you can efficiently restore application data from an existing backup while ensuring proper coordination with the running service.
-
-## Author
-
-hey everyone,
-
-💾 I’ve been in the IT game for over 20 years, cutting my teeth with some big names like [IBM](https://www.linkedin.com/in/heyvaldemar/), [Thales](https://www.linkedin.com/in/heyvaldemar/), and [Amazon](https://www.linkedin.com/in/heyvaldemar/). These days, I wear the hat of a DevOps Consultant and Team Lead, but what really gets me going is Docker and container technology - I’m kind of obsessed!
-
-💛 I have my own IT [blog](https://www.heyvaldemar.com/), where I’ve built a [community](https://discord.gg/AJQGCCBcqf) of DevOps enthusiasts who share my love for all things Docker, containers, and IT technologies in general. And to make sure everyone can jump on this awesome DevOps train, I write super detailed guides (seriously, they’re foolproof!) that help even newbies deploy and manage complex IT solutions.
-
-🚀 My dream is to empower every single person in the DevOps community to squeeze every last drop of potential out of Docker and container tech.
-
-🐳 As a [Docker Captain](https://www.docker.com/captains/vladimir-mikhalev/), I’m stoked to share my knowledge, experiences, and a good dose of passion for the tech. My aim is to encourage learning, innovation, and growth, and to inspire the next generation of IT whizz-kids to push Docker and container tech to its limits.
-
-Let’s do this together!
-
-## My 2D Portfolio
-
-🕹️ Click into [sre.gg](https://www.sre.gg/) — my virtual space is a 2D pixel-art portfolio inviting you to interact with elements that encapsulate the milestones of my DevOps career.
-
-## My Courses
-
-🎓 Dive into my [comprehensive IT courses](https://www.heyvaldemar.com/courses/) designed for enthusiasts and professionals alike. Whether you're looking to master Docker, conquer Kubernetes, or advance your DevOps skills, my courses provide a structured pathway to enhancing your technical prowess.
-
-🔑 [Each course](https://www.udemy.com/user/heyvaldemar/) is built from the ground up with real-world scenarios in mind, ensuring that you gain practical knowledge and hands-on experience. From beginners to seasoned professionals, there's something here for everyone to elevate their IT skills.
-
-## My Services
-
-💼 Take a look at my [service catalog](https://www.heyvaldemar.com/services/) and find out how we can make your technological life better. Whether it's increasing the efficiency of your IT infrastructure, advancing your career, or expanding your technological horizons — I'm here to help you achieve your goals. From DevOps transformations to building gaming computers — let's make your technology unparalleled!
-
-## Patreon Exclusives
-
-🏆 Join my [Patreon](https://www.patreon.com/heyvaldemar) and dive deep into the world of Docker and DevOps with exclusive content tailored for IT enthusiasts and professionals. As your experienced guide, I offer a range of membership tiers designed to suit everyone from newbies to IT experts.
-
-## My Recommendations
-
-📕 Check out my collection of [essential DevOps books](https://kit.co/heyvaldemar/essential-devops-books)\
-🖥️ Check out my [studio streaming and recording kit](https://kit.co/heyvaldemar/my-studio-streaming-and-recording-kit)\
-📡 Check out my [streaming starter kit](https://kit.co/heyvaldemar/streaming-starter-kit)
-
-## Follow Me
-
-🎬 [YouTube](https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1)\
-🐦 [X / Twitter](https://twitter.com/heyvaldemar)\
-🎨 [Instagram](https://www.instagram.com/heyvaldemar/)\
-🐘 [Mastodon](https://mastodon.social/@heyvaldemar)\
-🧵 [Threads](https://www.threads.net/@heyvaldemar)\
-🎸 [Facebook](https://www.facebook.com/heyvaldemarFB/)\
-🧊 [Bluesky](https://bsky.app/profile/heyvaldemar.bsky.social)\
-🎥 [TikTok](https://www.tiktok.com/@heyvaldemar)\
-💻 [LinkedIn](https://www.linkedin.com/in/heyvaldemar/)\
-📣 [daily.dev Squad](https://app.daily.dev/squads/devopscompass)\
-🧩 [LeetCode](https://leetcode.com/u/heyvaldemar/)\
-🐈 [GitHub](https://github.com/heyvaldemar)
-
-## Community of IT Experts
-
-👾 [Discord](https://discord.gg/AJQGCCBcqf)
-
-## Refill My Coffee Supplies
-
-💖 [PayPal](https://www.paypal.com/paypalme/heyvaldemarCOM)\
-🏆 [Patreon](https://www.patreon.com/heyvaldemar)\
-💎 [GitHub](https://github.com/sponsors/heyvaldemar)\
-🥤 [BuyMeaCoffee](https://www.buymeacoffee.com/heyvaldemar)\
-🍪 [Ko-fi](https://ko-fi.com/heyvaldemar)
-
-🌟 **Bitcoin (BTC):** bc1q2fq0k2lvdythdrj4ep20metjwnjuf7wccpckxc\
-🔹 **Ethereum (ETH):** 0x76C936F9366Fad39769CA5285b0Af1d975adacB8\
-🪙 **Binance Coin (BNB):** bnb1xnn6gg63lr2dgufngfr0lkq39kz8qltjt2v2g6\
-💠 **Litecoin (LTC):** LMGrhx8Jsx73h1pWY9FE8GB46nBytjvz8g
+## About the maintainer
 
 <div align="center">
 
-### Show some 💜 by starring some of the [repositories](https://github.com/heyValdemar?tab=repositories)!
+**Maintained by [Vladimir Mikhalev](https://github.com/heyvaldemar)** — Docker Captain · IBM Champion · AWS Community Builder
 
-![octocat](https://user-images.githubusercontent.com/10498744/210113490-e2fad07f-4488-4da8-a656-b9abbdd8cb26.gif)
+[YouTube](https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1) · [Blog](https://heyvaldemar.com) · [LinkedIn](https://www.linkedin.com/in/heyvaldemar/)
 
 </div>
-
-![footer](https://user-images.githubusercontent.com/10498744/210157572-1fca0242-8af2-46a6-bfa3-666ffd40ebde.svg)
