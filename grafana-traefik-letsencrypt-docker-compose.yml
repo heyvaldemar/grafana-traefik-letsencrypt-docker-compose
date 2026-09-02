@@ -27,6 +27,16 @@ volumes:
 services:
   postgres:
     image: *postgres-image
+    # Resource limits as .env-overridable defaults (e.g. GRAFANA_POSTGRES_MEMORY_LIMIT=2g);
+    # the override survives every git pull.
+    deploy:
+      resources:
+        limits:
+          memory: ${GRAFANA_POSTGRES_MEMORY_LIMIT:-1g}
+          cpus: "${GRAFANA_POSTGRES_CPU_LIMIT:-1.0}"
+        reservations:
+          memory: ${GRAFANA_POSTGRES_MEMORY_RESERVATION:-128m}
+          cpus: "${GRAFANA_POSTGRES_CPU_RESERVATION:-0.25}"
     volumes:
       - grafana-postgres:/var/lib/postgresql/data
     environment:
@@ -45,6 +55,16 @@ services:
 
   grafana:
     image: *grafana-image
+    # Resource limits as .env-overridable defaults (e.g. GRAFANA_MEMORY_LIMIT=2g);
+    # the override survives every git pull.
+    deploy:
+      resources:
+        limits:
+          memory: ${GRAFANA_MEMORY_LIMIT:-512m}
+          cpus: "${GRAFANA_CPU_LIMIT:-1.0}"
+        reservations:
+          memory: ${GRAFANA_MEMORY_RESERVATION:-64m}
+          cpus: "${GRAFANA_CPU_RESERVATION:-0.25}"
     volumes:
       - grafana-data:${DATA_PATH:-/var/lib/grafana}
     environment:
@@ -112,6 +132,16 @@ services:
 
   traefik:
     image: *traefik-image
+    # Resource limits as .env-overridable defaults (e.g. TRAEFIK_MEMORY_LIMIT=2g);
+    # the override survives every git pull.
+    deploy:
+      resources:
+        limits:
+          memory: ${TRAEFIK_MEMORY_LIMIT:-256m}
+          cpus: "${TRAEFIK_CPU_LIMIT:-0.5}"
+        reservations:
+          memory: ${TRAEFIK_MEMORY_RESERVATION:-64m}
+          cpus: "${TRAEFIK_CPU_RESERVATION:-0.1}"
     command:
       # Set the log level (DEBUG, INFO, WARN, ERROR)
       - "--log.level=${TRAEFIK_LOG_LEVEL:-WARN}"
@@ -184,6 +214,16 @@ services:
 
   backups:
     image: *postgres-image
+    # Resource limits as .env-overridable defaults (e.g. GRAFANA_BACKUPS_MEMORY_LIMIT=2g);
+    # the override survives every git pull.
+    deploy:
+      resources:
+        limits:
+          memory: ${GRAFANA_BACKUPS_MEMORY_LIMIT:-256m}
+          cpus: "${GRAFANA_BACKUPS_CPU_LIMIT:-0.5}"
+        reservations:
+          memory: ${GRAFANA_BACKUPS_MEMORY_RESERVATION:-32m}
+          cpus: "${GRAFANA_BACKUPS_CPU_RESERVATION:-0.1}"
     command: >-
       bash -c 'set -o pipefail;
       sleep "$$BACKUP_INIT_SLEEP";
