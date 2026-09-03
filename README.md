@@ -1,4 +1,4 @@
-# Grafana + Traefik + Let's Encrypt — Docker Compose
+# Grafana + Traefik + Let's Encrypt on Docker Compose
 
 [![Deployment Verification](https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -18,7 +18,7 @@
 - [Security Notes](#security-notes)
 - [About the maintainer](#about-the-maintainer)
 
-This repository deploys **Grafana** behind **Traefik** with automatic **Let's Encrypt TLS**, backed by **PostgreSQL** (instead of the default SQLite — real backups, real concurrency), with a scheduled **backup container** and companion **restore scripts**. One `docker compose up` away from production-shaped dashboards at `https://your-domain`.
+This repository deploys **Grafana** behind **Traefik** with automatic **Let's Encrypt TLS**, backed by **PostgreSQL** (instead of the default SQLite, real backups, real concurrency), with a scheduled **backup container** and companion **restore scripts**. One `docker compose up` away from production-shaped dashboards at `https://your-domain`.
 
 📙 Full narrative installation guide on the blog: [heyvaldemar.com/install-grafana-using-docker-compose/](https://www.heyvaldemar.com/install-grafana-using-docker-compose/).
 
@@ -44,7 +44,7 @@ Before you start, you need:
 
 - **A Linux server** with a public IP. Tested on Ubuntu 22.04 LTS+ and Debian 12+. Local Mac/Windows works for dev; production is Linux.
 - **Docker Engine 24+ and Docker Compose 2.20+.** Quick check: `docker version` and `docker compose version`.
-- **A domain you control,** with two `A` records pointing at your server's public IP — one for Grafana (e.g. `grafana.example.com`), one for the Traefik dashboard (e.g. `traefik.grafana.example.com`). DNS must propagate before deploy or the Let's Encrypt TLS-ALPN challenge will fail.
+- **A domain you control,** with two `A` records pointing at your server's public IP: one for Grafana (e.g. `grafana.example.com`), one for the Traefik dashboard (e.g. `traefik.grafana.example.com`). DNS must propagate before deploy or the Let's Encrypt TLS-ALPN challenge will fail.
 - **Ports 80 and 443 open** on the server's firewall and not bound by another service.
 - **~1 GB free RAM and 1 free CPU** for the running stack.
 
@@ -104,20 +104,20 @@ docker compose -f grafana-traefik-letsencrypt-docker-compose.yml -p grafana up -
 
 ## Features
 
-- **Grafana** latest stable (13.2.0) with a **PostgreSQL backend** — consistent backups and no SQLite locking.
+- **Grafana** latest stable (13.2.0) with a **PostgreSQL backend**: consistent backups and no SQLite locking.
 - **Zabbix datasource plugin** (`alexanderzobnin-zabbix-app`) preinstalled by default; add more via `GRAFANA_PLUGINS_INSTALL`.
 - **Traefik v3** reverse proxy with automatic HTTP→HTTPS redirect and Let's Encrypt TLS-ALPN certificate issuance.
 - **Basic-auth protected Traefik dashboard** on a separate hostname.
 - **Sign-up and anonymous access disabled by default**; SMTP off by default (opt-in for alert emails).
 - **Scheduled backups** of the database and Grafana data with retention pruning, plus restore scripts.
-- **Credentials required at deploy time** — compose fails fast if `.env` is incomplete.
+- **Credentials required at deploy time**: compose fails fast if `.env` is incomplete.
 
 ### Typical use cases
 
-- **Dashboards for a Zabbix installation** — pairs with the [Zabbix template](https://github.com/heyvaldemar/zabbix-traefik-letsencrypt-docker-compose); the datasource plugin ships preinstalled.
-- **Central observability UI** — Prometheus, Loki, InfluxDB, and dozens of other datasources.
-- **Team metrics portal** — org/team permissions on a proper database backend.
-- **Alerting hub** — Grafana Alerting with email (enable SMTP), Slack, Telegram, or webhooks.
+- **Dashboards for a Zabbix installation**: pairs with the [Zabbix template](https://github.com/heyvaldemar/zabbix-traefik-letsencrypt-docker-compose); the datasource plugin ships preinstalled.
+- **Central observability UI**: Prometheus, Loki, InfluxDB, and dozens of other datasources.
+- **Team metrics portal**: org/team permissions on a proper database backend.
+- **Alerting hub**: Grafana Alerting with email (enable SMTP), Slack, Telegram, or webhooks.
 
 ## Email alerts (SMTP)
 
@@ -138,13 +138,13 @@ then `docker compose up -d --force-recreate`.
 
 This repository is a **deployment template**, not a custom Docker image. It orchestrates three upstream images:
 
-- [`traefik`](https://hub.docker.com/_/traefik) — reverse proxy, Docker Hub official image
-- [`grafana/grafana`](https://hub.docker.com/r/grafana/grafana) — Grafana upstream
-- [`postgres`](https://hub.docker.com/_/postgres) — PostgreSQL (alpine), Docker Hub official image
+- [`traefik`](https://hub.docker.com/_/traefik): reverse proxy, Docker Hub official image
+- [`grafana/grafana`](https://hub.docker.com/r/grafana/grafana): Grafana upstream
+- [`postgres`](https://hub.docker.com/_/postgres): PostgreSQL (alpine), Docker Hub official image
 
-All three are pinned to `tag@sha256:<digest>` as interpolation defaults in the compose file's `x-images` block. Compose pulls by digest, not by tag — and `git pull` alone delivers the version combination this repository has tested. Setting an `*_IMAGE_TAG` variable in `.env` overrides the default when you deliberately want a different version.
+All three are pinned to `tag@sha256:<digest>` as interpolation defaults in the compose file's `x-images` block. Compose pulls by digest, not by tag, and `git pull` alone delivers the version combination this repository has tested. Setting an `*_IMAGE_TAG` variable in `.env` overrides the default when you deliberately want a different version.
 
-The daily `check-pin-freshness` CI job re-resolves each pinned tag against its registry and compares the pinned Grafana and Traefik versions against the latest upstream releases — any drift fails the run and notifies the maintainer. CI's **Deployment Verification** workflow runs on every push, pull request, and every day at 06:00 UTC. GitHub Actions are pinned by commit SHA; Dependabot keeps those fresh.
+The daily `check-pin-freshness` CI job re-resolves each pinned tag against its registry and compares the pinned Grafana and Traefik versions against the latest upstream releases. Any drift fails the run and notifies the maintainer. CI's **Deployment Verification** workflow runs on every push, pull request, and every day at 06:00 UTC. GitHub Actions are pinned by commit SHA; Dependabot keeps those fresh.
 
 ## Production checklist
 
@@ -152,7 +152,7 @@ Before exposing this to real users, check every box:
 
 - [ ] **Strong secrets.** `GRAFANA_DB_PASSWORD` and `GRAFANA_ADMIN_PASSWORD` at 24+ random characters; regenerate the Traefik dashboard BCrypt hash per deployment.
 - [ ] **Keep sign-ups disabled** (`GRAFANA_USERS_ALLOW_SIGN_UP=false`, the default) unless you mean it.
-- [ ] **Host-mount the backup volumes** for disaster recovery — bind the backup paths to host directories covered by your off-host backup solution.
+- [ ] **Host-mount the backup volumes** for disaster recovery: bind the backup paths to host directories covered by your off-host backup solution.
 - [ ] **Verify Let's Encrypt cert issuance** in the Traefik logs on first start.
 - [ ] **Back up before major upgrades.** Grafana migrates its schema forward automatically (this template moved 12 → 13); the way back is a restore.
 - [ ] **Know the restore procedure.** Run both restore scripts against a test environment before you need them in production.
@@ -161,7 +161,7 @@ Before exposing this to real users, check every box:
 
 The `backups` container performs a dump → archive → prune → sleep loop: `pg_dump | gzip` of the Grafana database, `tar.gz` of the Grafana data directory (dashboards live in the DB; the data dir carries plugins and images), pruning by retention windows, then sleeping `BACKUP_INTERVAL` (default 24h).
 
-Each cycle logs `Database backup OK: <file> (<bytes> bytes)` or `Database backup FAILED` (the same for the data archive where there is one). A failed dump is kept as `<file>.failed` for diagnosis and never overwrites a good backup — grep the log for `FAILED` from your monitoring.
+Each cycle logs `Database backup OK: <file> (<bytes> bytes)` or `Database backup FAILED` (the same for the data archive where there is one). A failed dump is kept as `<file>.failed` for diagnosis and never overwrites a good backup. Grep the log for `FAILED` from your monitoring.
 
 **Verify backups are running:**
 
@@ -174,7 +174,7 @@ docker compose -p grafana exec backups sh -c 'ls -la /srv/grafana-postgres/backu
 
 ## Resource limits
 
-Every service carries memory and CPU limits plus reservations as compose-level defaults — the same values CI boots the stack under. Override any of them in `.env` (the knobs and their defaults are listed in `.env.example`, e.g. `TRAEFIK_MEMORY_LIMIT=512m`) and the override survives every `git pull`. If a service is OOM-killed under real load, `docker inspect <container> --format '{{.State.OOMKilled}}'` says so; raise its `_MEMORY_LIMIT` and recreate.
+Every service carries memory and CPU limits plus reservations as compose-level defaults: the same values CI boots the stack under. Override any of them in `.env` (the knobs and their defaults are listed in `.env.example`, e.g. `TRAEFIK_MEMORY_LIMIT=512m`) and the override survives every `git pull`. If a service is OOM-killed under real load, `docker inspect <container> --format '{{.State.OOMKilled}}'` says so; raise its `_MEMORY_LIMIT` and recreate.
 
 ## Container hardening
 
@@ -184,23 +184,23 @@ Every service runs with `security_opt: no-new-privileges:true`, so a process can
 
 The [Deployment Verification](https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml?query=branch%3Amain) workflow runs on every push, pull request, and every day at 06:00 UTC:
 
-1. **Lint** — shellcheck on both restore scripts, actionlint on the workflow.
+1. **Lint**: shellcheck on both restore scripts, actionlint on the workflow.
 2. **Trivy scans** of all three pinned images (CRITICAL/HIGH, SARIF to the Security tab).
-3. **Pin freshness** (daily/manual) — digest drift plus release-lag checks for Grafana and Traefik.
-4. **Deploy-and-test** — boots the full stack with ephemeral credentials and requires `/api/health` to report `database: ok` through Traefik plus a 200 login page — the shipped configuration must produce a working Grafana on its Postgres backend, not just started containers.
+3. **Pin freshness** (daily/manual): digest drift plus release-lag checks for Grafana and Traefik.
+4. **Deploy-and-test**: boots the full stack with ephemeral credentials and requires `/api/health` to report `database: ok` through Traefik plus a 200 login page. The shipped configuration must produce a working Grafana on its Postgres backend, not just started containers.
 
 A green run is the authoritative proof that the template deploys end-to-end and that its backups restore.
 
 ### Backup and restore, proven
 
-`tests/e2e-backup-restore.sh` runs against the live stack and is what CI executes after the HTTPS smoke. The scenario that matters most is the restore roundtrip: insert a marker row, restore the earliest backup, assert the marker is gone — a backup that cannot be restored fails the build. Run it yourself against a running deployment with short intervals in `.env` (`BACKUP_INIT_SLEEP=15s`, `BACKUP_INTERVAL=60s`):
+`tests/e2e-backup-restore.sh` runs against the live stack and is what CI executes after the HTTPS smoke. The scenario that matters most is the restore roundtrip: insert a marker row, restore the earliest backup, assert the marker is gone. A backup that cannot be restored fails the build. Run it yourself against a running deployment with short intervals in `.env` (`BACKUP_INIT_SLEEP=15s`, `BACKUP_INTERVAL=60s`):
 
 ```bash
 chmod +x tests/e2e-backup-restore.sh
 ./tests/e2e-backup-restore.sh
 ```
 
-It stops the database container briefly to prove failure detection — run it on a staging copy, not on production.
+It stops the database container briefly to prove failure detection. Run it on a staging copy, not on production.
 
 ## Security Notes
 
@@ -215,7 +215,7 @@ It stops the database container briefly to prove failure detection — run it on
 
 <div align="center">
 
-**Maintained by [Vladimir Mikhalev](https://github.com/heyvaldemar)** — Docker Captain · IBM Champion · AWS Community Builder
+**Maintained by [Vladimir Mikhalev](https://github.com/heyvaldemar)** · Docker Captain · IBM Champion · AWS Community Builder
 
 [YouTube](https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1) · [Blog](https://heyvaldemar.com) · [LinkedIn](https://www.linkedin.com/in/heyvaldemar/)
 
