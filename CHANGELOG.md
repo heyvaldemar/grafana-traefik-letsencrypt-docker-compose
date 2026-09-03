@@ -25,6 +25,10 @@ _(no unreleased changes yet)_
   `docker compose up` fails with an invalid reference instead of
   deploying something unexpected.
 
+### Changed
+
+- `grafana/grafana` 13.2.0 to 13.2.1.
+
 ## [1.3.0] - 2026-09-02
 
 ### Security
