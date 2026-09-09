@@ -81,7 +81,7 @@ docker compose -f grafana-traefik-letsencrypt-docker-compose.yml -p grafana ps
 
 # Health endpoint reports the database is fine:
 curl -fsS "https://${GRAFANA_HOSTNAME}/api/health"
-# Expected: { "database": "ok", "version": "13.2.0", ... }
+# Expected: { "database": "ok", "version": "13.2.1", ... }
 
 # Traefik issued a certificate:
 docker compose -p grafana logs traefik | grep -i "adding certificate"
@@ -105,7 +105,7 @@ docker compose -f grafana-traefik-letsencrypt-docker-compose.yml -p grafana up -
 
 ## Features
 
-- **Grafana** latest stable (13.2.0) with a PostgreSQL backend: consistent backups and no SQLite locking.
+- **Grafana** latest stable (13.2.1) with a PostgreSQL backend: consistent backups and no SQLite locking.
 - **Zabbix datasource plugin** (`alexanderzobnin-zabbix-app`) preinstalled by default; add more via `GRAFANA_PLUGINS_INSTALL`.
 - **Traefik v3** reverse proxy with automatic HTTP→HTTPS redirect and Let's Encrypt TLS-ALPN certificate issuance.
 - **Basic-auth protected Traefik dashboard** on a separate hostname.
