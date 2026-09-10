@@ -286,11 +286,15 @@ services:
         fi;
         DATA_FILE="$$DATA_BACKUPS_PATH/$$DATA_BACKUP_NAME-$$STAMP.tar.gz";
         echo "[$$(date -Iseconds)] Starting data backup to $$DATA_FILE";
-        # GNU tar exits 1 when a live application changed a file mid-read;
-        # the archive is complete - only exit 2 is a real failure. No GNU-only
+        # The exit code alone cannot decide this. GNU tar reserves 1 for
+        # "a file changed while I read it" and 2 for a real failure, but the
+        # sidecar runs an alpine image, whose BusyBox tar returns 1 for both -
+        # including the is-a-directory case, where nothing was written at all.
+        # So the archive has to read back before it is renamed: true on either
+        # tar, and a stronger promise than the code was. No GNU-only
         # flags: alpine images ship BusyBox tar.
         tar -zcpf "$$DATA_FILE.partial" $$DATA_PATH; RC=$$?;
-        if [ "$$RC" -eq 0 ] || [ "$$RC" -eq 1 ]; then
+        if { [ "$$RC" -eq 0 ] || [ "$$RC" -eq 1 ]; } && tar -tzf "$$DATA_FILE.partial" > /dev/null 2>&1; then
           mv "$$DATA_FILE.partial" "$$DATA_FILE";
           echo "[$$(date -Iseconds)] Data backup OK: $$DATA_FILE ($$(stat -c %s "$$DATA_FILE") bytes)$$([ "$$RC" -eq 1 ] && echo " - some files changed while being read")";
         else
