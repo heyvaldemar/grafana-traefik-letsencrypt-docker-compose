@@ -177,7 +177,7 @@ docker compose -p grafana logs backups | tail -5
 docker compose -p grafana exec backups sh -c 'ls -la /srv/grafana-postgres/backups/ /srv/grafana-application-data/backups/'
 ```
 
-**Restore** with the interactive scripts (`chmod +x *.sh` once): `./grafana-restore-database.sh`, then `./grafana-restore-application-data.sh` if needed.
+**Restore** with the interactive scripts (`chmod +x *.sh` once): `./grafana-restore-database.sh`, then `./grafana-restore-application-data.sh` if needed. Each lists the backups and asks, or takes a file name as its argument; both read every path and credential from the running backups container, and CI runs both on every push.
 
 ## Resource limits
 
