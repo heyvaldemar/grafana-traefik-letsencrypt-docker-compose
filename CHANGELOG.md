@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.8.0] - 2026-09-26
+
 ### Added
 
 - **Traefik's timeouts on the HTTPS entry point can be set from `.env`.**
@@ -230,7 +234,8 @@ v1.2.0.
 
 - Shellcheck findings in both restore scripts.
 
-[Unreleased]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.7.3...HEAD
+[Unreleased]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.7.4...v1.8.0
 [1.7.3]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.7.0...v1.7.1
