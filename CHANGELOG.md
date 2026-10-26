@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Security
+
+- **`postgres:17-alpine` was rebuilt upstream**; the pin moved from `sha256:eee6c6e1b089…` to `sha256:266d3c257594…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
 
 ## [1.8.8] - 2026-10-23
 
