@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.8.13] - 2026-11-04
+
 ### Security
 
 - **`traefik:3.7` was rebuilt upstream**; the pin moved from `sha256:e9338a01a433…` to `sha256:68ae5fe5b64c…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
@@ -319,7 +323,8 @@ v1.2.0.
 
 - Shellcheck findings in both restore scripts.
 
-[Unreleased]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.12...HEAD
+[Unreleased]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.13...HEAD
+[1.8.13]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.12...v1.8.13
 [1.8.12]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.11...v1.8.12
 [1.8.11]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.10...v1.8.11
 [1.8.10]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.9...v1.8.10
