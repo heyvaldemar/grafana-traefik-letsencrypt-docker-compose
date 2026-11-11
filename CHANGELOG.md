@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.8.15] - 2026-11-11
+
 ### Changed
 
 - **`grafana/grafana:13.3.0` moved to `grafana/grafana:13.3.1`.** The freshness check reported the lag; the deploy job booted the stack on the new image before this landed.
@@ -336,7 +340,8 @@ v1.2.0.
 
 - Shellcheck findings in both restore scripts.
 
-[Unreleased]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.14...HEAD
+[Unreleased]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.15...HEAD
+[1.8.15]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.14...v1.8.15
 [1.8.14]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.13...v1.8.14
 [1.8.13]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.12...v1.8.13
 [1.8.12]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.11...v1.8.12
