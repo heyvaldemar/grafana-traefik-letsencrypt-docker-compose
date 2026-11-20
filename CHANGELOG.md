@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.8.19] - 2026-11-20
+
 ### Security
 
 - **`postgres:17-alpine` was rebuilt upstream**; the pin moved from `sha256:d3244e8ce3f1…` to `sha256:526f86d93c6e…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
@@ -360,7 +364,8 @@ v1.2.0.
 
 - Shellcheck findings in both restore scripts.
 
-[Unreleased]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.18...HEAD
+[Unreleased]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.19...HEAD
+[1.8.19]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.18...v1.8.19
 [1.8.18]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.17...v1.8.18
 [1.8.17]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.16...v1.8.17
 [1.8.16]: https://github.com/heyvaldemar/grafana-traefik-letsencrypt-docker-compose/compare/v1.8.15...v1.8.16
