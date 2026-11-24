@@ -8,7 +8,7 @@
 x-images:
   traefik: &traefik-image ${TRAEFIK_IMAGE_TAG:-traefik:${TRAEFIK_IMAGE_VERSION:-3.7@sha256:649c6476d4c499de84572bc60f5ecf75e98e75a5b8f8a8a72010c836d8ee9f95}}
   postgres: &postgres-image ${GRAFANA_POSTGRES_IMAGE_TAG:-postgres:${GRAFANA_POSTGRES_IMAGE_VERSION:-17-alpine@sha256:526f86d93c6ea08fd3f1fe5605650cacc781b2c6013169a0ad8f42c7d3d84f32}}
-  grafana: &grafana-image ${GRAFANA_IMAGE_TAG:-grafana/grafana:${GRAFANA_IMAGE_VERSION:-13.3.1@sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf}}
+  grafana: &grafana-image ${GRAFANA_IMAGE_TAG:-grafana/grafana:${GRAFANA_IMAGE_VERSION:-13.3.2@sha256:81556409ba48b2b922e0adb69a2511337d8ba7578f11962eefa6149a2d815101}}
 
 networks:
   grafana-network:
